@@ -1,7 +1,5 @@
-use std::io;
-
 use clap::{Parser, Subcommand};
-use crate::{controller::Controller, file::ShortcutFile};
+use crate::{controller::Controller, file::ShortcutFile, errors::Result};
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -41,7 +39,7 @@ pub enum Command {
 }
 
 impl Command {
-  pub fn apply(&self, controller: &mut Controller) -> io::Result<()> {
+  pub fn apply(&self, controller: &mut Controller) -> Result<()> {
     match self {
       Self::New { name, command, override_interpreters } =>
         controller.new_link(name, ShortcutFile::builder()

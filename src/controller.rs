@@ -1,6 +1,6 @@
-use std::{fs, io, path, env};
+use std::{fs, path, env};
 
-use crate::file::ShortcutFile;
+use crate::{file::ShortcutFile, errors::Result};
 
 pub struct Controller {
   path: path::PathBuf
@@ -11,7 +11,7 @@ const BIN_FOLDER: &str = "bin";
 const SUFFIX: &str = ".toml";
 
 impl Controller {
-  pub fn new() -> io::Result<Self> {
+  pub fn new() -> Result<Self> {
     Ok(Controller { path: env::current_exe()?.parent().unwrap().into()  })
   }
 
@@ -23,16 +23,16 @@ impl Controller {
     self.path.as_path().join(BIN_FOLDER)
   }
 
-  pub fn setup(&mut self) -> io::Result<()> {
+  pub fn setup(&mut self) -> Result<()> {
     fs::create_dir_all(self.meta_folder())?;
-    fs::create_dir_all(self.bin_folder())
+    fs::create_dir_all(self.bin_folder()).map_err(|err| err.into())
   }
 
-  pub fn new_link(&mut self, name: impl AsRef<str>, file: ShortcutFile) -> io::Result<()> {
+  pub fn new_link(&mut self, name: impl AsRef<str>, file: ShortcutFile) -> Result<()> {
     file.store(self.meta_folder().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
-  pub fn delete(&mut self, names: &[impl AsRef<str>], by_filename: bool) -> io::Result<()> {
+  pub fn delete(&mut self, names: &[impl AsRef<str>], by_filename: bool) -> Result<()> {
     let targets: Vec<&str> = names.into_iter().map(|x| x.as_ref()).collect();
     let filter = if by_filename {
       Box::new(
@@ -54,7 +54,7 @@ impl Controller {
     Ok(())
   }
 
-  pub fn list(&self, notify_errors: bool, verbose: bool) -> io::Result<()> {
+  pub fn list(&self, notify_errors: bool, verbose: bool) -> Result<()> {
     for entry in fs::read_dir(self.meta_folder())?.into_iter().filter_map(|x| x.ok()) {
       match ShortcutFile::load(entry.path()) {
         Ok(file) => println!("> {} => {}", file.name, file.body),
@@ -72,12 +72,12 @@ impl Controller {
 
   pub fn make(
     &mut self, names: &[impl AsRef<str>], override_interpreters: Option<&[impl AsRef<str>]>
-  ) -> io::Result<()> {
+  ) -> Result<()> {
     Ok(())
   }
 
-  pub fn clean(&mut self) -> io::Result<()> {
+  pub fn clean(&mut self) -> Result<()> {
     fs::remove_dir_all(self.bin_folder())?;
-    fs::create_dir(self.bin_folder())
+    fs::create_dir(self.bin_folder()).map_err(|err| err.into())
   }
 }

@@ -1,12 +1,11 @@
 mod cli;
 mod file;
+mod errors;
 mod controller;
-
-use std::io;
 
 use clap::Parser;
 
-fn main() -> io::Result<()> {
+fn main() -> errors::Result<()> {
   let args = cli::Cli::parse();
   let mut controller = controller::Controller::new().unwrap();
 

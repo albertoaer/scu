@@ -1,5 +1,7 @@
 use serde::{Serialize, Deserialize};
-use std::{fs, io, path};
+use std::{fs, path};
+
+use crate::errors::{Result, ScuError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ShortcutFile {
@@ -9,14 +11,14 @@ pub struct ShortcutFile {
 }
 
 impl ShortcutFile {
-  pub fn load(path: impl AsRef<path::Path>) -> io::Result<Self> {
+  pub fn load(path: impl AsRef<path::Path>) -> Result<Self> {
     toml::from_str(fs::read_to_string(path)?.as_str())
-      .map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
+      .map_err(|err| err.into())
   }
 
-  pub fn store(&self, path: impl AsRef<path::Path>) -> io::Result<()> {
-    toml::to_string_pretty(self).map_err(|err| io::Error::new(io::ErrorKind::InvalidData, err))
-      .and_then(|data| fs::write(path, data))
+  pub fn store(&self, path: impl AsRef<path::Path>) -> Result<()> {
+    toml::to_string_pretty(self).map_err(|err| ScuError::from(err))
+      .and_then(|data| fs::write(path, data).map_err(|err| err.into()))
   }
 
   pub fn builder() -> ShortcutFileBuilder {
