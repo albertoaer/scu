@@ -1,12 +1,12 @@
 use serde::{Serialize, Deserialize};
 use std::{fs, path};
 
-use crate::errors::{Result, ScuError};
+use crate::{errors::{Result, ScuError}, interpreter::Interpreter};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ShortcutFile {
   pub name: String,
-  pub override_interpreters: Option<Vec<String>>,
+  pub override_interpreters: Option<Vec<Interpreter>>,
   pub body: ShortcutFileBody
 }
 
@@ -26,7 +26,7 @@ impl ShortcutFile {
   }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ShortcutFileBody {
   Command(Vec<String>),
 }
@@ -43,7 +43,7 @@ impl std::fmt::Display for ShortcutFileBody {
 
 pub struct ShortcutFileBuilder {
   pub name: Option<String>,
-  pub override_interpreters: Option<Vec<String>>,
+  pub override_interpreters: Option<Vec<Interpreter>>,
   pub body: Option<ShortcutFileBody>
 }
 
@@ -61,7 +61,7 @@ impl ShortcutFileBuilder {
     self
   }
   
-  pub fn override_interpreters(mut self, interpreters: Option<Vec<String>>) -> Self {
+  pub fn override_interpreters(mut self, interpreters: Option<Vec<Interpreter>>) -> Self {
     self.override_interpreters = interpreters;
     self
   }

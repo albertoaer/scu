@@ -1,7 +1,9 @@
 mod cli;
 mod file;
 mod errors;
+mod script;
 mod controller;
+mod interpreter;
 
 use clap::Parser;
 

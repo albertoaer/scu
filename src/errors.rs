@@ -1,5 +1,5 @@
 macro_rules! scu_enum_err {
-  {$($variant:ident($err:path),)*} => {
+  {$($variant:ident($err:path)),*} => {
     #[derive(Debug)]
     pub enum ScuError {
       $($variant($err),)*
@@ -27,6 +27,7 @@ scu_enum_err! {
   IoError(std::io::Error),
   DeserializeError(toml::de::Error),
   SerializeError(toml::ser::Error),
+  StringError(String)
 }
 
 pub type Result<T> = std::result::Result<T, ScuError>;

@@ -48,7 +48,7 @@ impl Command {
         controller.new_link(name, ShortcutFile::builder()
           .name(name)
           .command(command.clone())
-          .override_interpreters(override_interpreters.clone())
+          //FIXME: .override_interpreters(override_interpreters.clone())
           .build()
         ),
       Self::Delete { names, filename } =>
