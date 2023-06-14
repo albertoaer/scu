@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use std::{fs, path};
+use std::{fs, path, borrow::Cow};
 
 use crate::{errors::{Result, ScuError}, interpreter::Interpreter};
 
@@ -29,6 +29,14 @@ impl ShortcutFile {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ShortcutFileBody {
   Command(Vec<String>),
+}
+
+impl ShortcutFileBody {
+  pub fn command(&self) -> Vec<String> {
+    match self {
+      Self::Command(vec) => vec.clone()
+    }
+  }
 }
 
 impl std::fmt::Display for ShortcutFileBody {

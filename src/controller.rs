@@ -1,6 +1,6 @@
 use std::{fs, path, env};
 
-use crate::{file::ShortcutFile, errors::Result};
+use crate::{file::ShortcutFile, errors::Result, interpreter::Interpreter, script::Script};
 
 pub struct Controller {
   path: path::PathBuf
@@ -28,7 +28,7 @@ impl Controller {
     fs::create_dir_all(self.bin_folder()).map_err(|err| err.into())
   }
 
-  pub fn new_link(&mut self, name: impl AsRef<str>, file: ShortcutFile) -> Result<()> {
+  pub fn new_shortcut(&mut self, name: impl AsRef<str>, file: ShortcutFile) -> Result<()> {
     file.store(self.meta_folder().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
@@ -70,9 +70,35 @@ impl Controller {
     Ok(())
   }
 
+  pub fn find_shortcut(&self, name: impl AsRef<str>) -> Result<ShortcutFile> {
+    ShortcutFile::load(self.meta_folder().join(format!("{}{}", name.as_ref(), SUFFIX)))
+  }
+
   pub fn make(
     &mut self, names: &[impl AsRef<str>], override_interpreters: Option<&[impl AsRef<str>]>
   ) -> Result<()> {
+    let shortcut_files = names.iter().map(|name| self.find_shortcut(name)).collect::<Result<Vec<ShortcutFile>>>()?;
+    let override_interpreters: Option<Vec<Interpreter>> = match override_interpreters.and_then(
+      |x| Some(x.iter().map(|x| x.as_ref().try_into()).collect::<Result<Vec<Interpreter>>>())
+    ) {
+      Some(result) => Some(result?),
+      None => None,
+    };
+    let all_interpreters = Interpreter::all();
+    for file in shortcut_files {
+      let interpreters = [
+        override_interpreters.as_deref(),
+        file.override_interpreters.as_deref(),
+        Some(all_interpreters.as_slice())
+      ].into_iter().find(|x| x.is_some()).unwrap().unwrap();
+      for interpreter in interpreters {
+        let script = Script::new(interpreter, file.body.command())?;
+        fs::write(
+          self.bin_folder().join(format!("{}{}", file.name, interpreter.extension())),
+          format!("{}", script)
+        )?;
+      }
+    }
     Ok(())
   }
 

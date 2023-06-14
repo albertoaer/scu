@@ -1,5 +1,7 @@
 use serde::{Serialize, Deserialize};
 
+use crate::errors::ScuError;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Interpreter {
   Bash,
@@ -21,7 +23,7 @@ impl Interpreter {
   }
 
   pub fn from_name(name: impl AsRef<str>) -> Option<Self> {
-    match name.as_ref() {
+    match name.as_ref().to_ascii_lowercase().as_str() {
       "bash" => Some(Self::Bash),
       "cmd" | "batch" => Some(Self::Cmd),
       "python" => Some(Self::Python),
@@ -32,7 +34,7 @@ impl Interpreter {
   }
 
   pub fn from_extension(extension: impl AsRef<str>) -> Option<Self> {
-    match extension.as_ref() {
+    match extension.as_ref().to_ascii_lowercase().as_str() {
       ".sh" => Some(Self::Bash),
       ".bat" => Some(Self::Cmd),
       ".py" => Some(Self::Python),
@@ -60,5 +62,13 @@ impl Interpreter {
       Self::Pythonw => ".pyw",
       Self::Powershell => ".ps1"
     }
+  }
+}
+
+impl TryFrom<&str> for Interpreter {
+  type Error = ScuError;
+
+  fn try_from(value: &str) -> Result<Self, Self::Error> {
+    Self::from_name(value).ok_or(ScuError::StringError(format!("Interpreter not registered {}", value)))
   }
 }

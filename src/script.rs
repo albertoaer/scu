@@ -3,19 +3,19 @@ use std::fmt::Display;
 use crate::{interpreter::Interpreter, errors::{Result, ScuError}};
 
 #[derive(Clone, Debug)]
-pub struct Script {
-  interpreter: Interpreter,
+pub struct Script<'a> {
+  interpreter: &'a Interpreter,
   binary: String,
   args: Vec<String>
 }
 
-impl Script {
-  pub fn new(interpreter: Interpreter, command: Vec<String>) -> Result<Self> {
+impl<'a> Script<'a> {
+  pub fn new(interpreter: &'a Interpreter, command: Vec<String>) -> Result<Self> {
     command.get(0).ok_or(ScuError::StringError("Expecting at least one element".into())).map(
       |binary| Script {
         interpreter,
         binary: binary.clone(),
-        args: command[0..].to_vec()
+        args: command[1..].to_vec()
       }
     )
   }
@@ -23,7 +23,7 @@ impl Script {
 
 macro_rules! script_display {
   {$($($variant:ident)* => $template:literal [$($options:tt)*])*} => {
-    impl Display for Script {
+    impl Display for Script<'_> {
       fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.interpreter {
           $(
@@ -49,21 +49,21 @@ macro_rules! script_options_display {
 
 script_display! {
   Bash => "#!/bin/sh
-  \"{}\" {} \"$@\"
-  exit $?" [sep " " wrap "\"{}\""]
+\"{}\" {} \"$@\"
+exit $?" [sep " " wrap "\"{}\""]
 
   Cmd => "@ECHO off
-  \"{}\" {} %*
-  EXIT /b %errorlevel%" [sep " " wrap "\"{}\""]
+\"{}\" {} %*
+EXIT /b %errorlevel%" [sep " " wrap "\"{}\""]
 
   Python Pythonw => "from subprocess import run
-  from sys import argv
-  
-  program = [\"{}\", {}]
-  
-  code = run(program + argv[1:]).returncode
-  exit(code)" [sep ", " wrap "\"{}\""]
+from sys import argv
+
+program = [\"{}\", {}]
+
+code = run(program + argv[1:]).returncode
+exit(code)" [sep ", " wrap "\"{}\""]
 
   Powershell => "& \"{}\" {} $args
-  exit $LASTEXITCODE" [sep " " wrap "\"{}\""]
+exit $LASTEXITCODE" [sep " " wrap "\"{}\""]
 }

@@ -12,29 +12,29 @@ pub enum Command {
   #[clap(about = "Create a shortcut template, it can overwrite an existing one")]
   New {
     name: String,
-    #[clap(required = true)]
+    #[arg(required = true)]
     command: Vec<String>,
-    #[clap(name = "interpreters", short = 'i')]
+    #[arg(name = "interpreters", short = 'i', num_args(0..))]
     override_interpreters: Option<Vec<String>>,
   },
   #[clap(name = "del", about = "Delete a shortcut template")]
   Delete {
-    #[clap(required = true)]
+    #[arg(required = true)]
     names: Vec<String>,
-    #[clap(short = 'f')]
+    #[arg(short = 'f')]
     filename: bool
   },
   #[clap(about = "List all the existing resources")]
   List {
-    #[clap(short = 'e')]
+    #[arg(short = 'e')]
     errors: bool,
-    #[clap(short = 'v')]
+    #[arg(short = 'v')]
     verbose: bool
   },
   Make {
-    #[clap(name = "interpreters", short = 'i')]
+    #[arg(name = "interpreters", short = 'i', num_args(0..))]
     override_interpreters: Option<Vec<String>>,
-    #[clap(required = true)]
+    #[arg(required = true)]
     names: Vec<String>
   },
   #[clap(about = "Clean all the created binaries")]
@@ -45,7 +45,7 @@ impl Command {
   pub fn apply(&self, controller: &mut Controller) -> Result<()> {
     match self {
       Self::New { name, command, override_interpreters } =>
-        controller.new_link(name, ShortcutFile::builder()
+        controller.new_shortcut(name, ShortcutFile::builder()
           .name(name)
           .command(command.clone())
           //FIXME: .override_interpreters(override_interpreters.clone())
