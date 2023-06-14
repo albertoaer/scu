@@ -9,6 +9,7 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+  #[clap(about = "Create a shortcut template, it can overwrite an existing one")]
   New {
     name: String,
     #[clap(required = true)]
@@ -16,13 +17,14 @@ pub enum Command {
     #[clap(name = "interpreters", short = 'i')]
     override_interpreters: Option<Vec<String>>,
   },
-  #[clap(name = "del")]
+  #[clap(name = "del", about = "Delete a shortcut template")]
   Delete {
     #[clap(required = true)]
     names: Vec<String>,
     #[clap(short = 'f')]
     filename: bool
   },
+  #[clap(about = "List all the existing resources")]
   List {
     #[clap(short = 'e')]
     errors: bool,
@@ -35,6 +37,7 @@ pub enum Command {
     #[clap(required = true)]
     names: Vec<String>
   },
+  #[clap(about = "Clean all the created binaries")]
   Clean
 }
 
