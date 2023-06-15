@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::{controller::Controller, file::ShortcutFile, errors::Result, interpreter::Interpreter};
+use crate::{controller::Controller, shortcut::Shortcut, errors::Result, interpreter::Interpreter};
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -47,7 +47,7 @@ impl Command {
   pub fn apply(&self, controller: &mut Controller) -> Result<()> {
     match self {
       Self::New { name, command, interpreters, make } => {
-        let shortcut = ShortcutFile::builder()
+        let shortcut = Shortcut::builder()
           .name(name)
           .command(command.clone())
           .interpreters(Interpreter::try_collect(interpreters.as_deref())?)

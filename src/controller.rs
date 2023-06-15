@@ -1,6 +1,6 @@
 use std::{fs, path, env};
 
-use crate::{file::ShortcutFile, errors::Result, interpreter::Interpreter, script::Script};
+use crate::{shortcut::Shortcut, errors::Result, interpreter::Interpreter, script::Script};
 
 pub struct Controller {
   path: path::PathBuf
@@ -28,7 +28,7 @@ impl Controller {
     fs::create_dir_all(self.bin_folder()).map_err(|err| err.into())
   }
 
-  pub fn new_shortcut(&mut self, name: impl AsRef<str>, file: ShortcutFile) -> Result<()> {
+  pub fn new_shortcut(&mut self, name: impl AsRef<str>, file: Shortcut) -> Result<()> {
     file.store(self.meta_folder().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
@@ -39,7 +39,7 @@ impl Controller {
         |entry: &fs::DirEntry| targets.contains(&entry.file_name().to_str().unwrap())
       ) as Box<dyn Fn(&fs::DirEntry)->bool>
     } else {
-      Box::new(|entry: &fs::DirEntry| match ShortcutFile::load(entry.path()) {
+      Box::new(|entry: &fs::DirEntry| match Shortcut::load(entry.path()) {
         Ok(file) => targets.contains(&file.name.as_str()),
         Err(_) => false,
       }) as Box<dyn Fn(&fs::DirEntry)->bool>
@@ -56,7 +56,7 @@ impl Controller {
 
   pub fn list(&self, notify_errors: bool, verbose: bool) -> Result<()> {
     for entry in fs::read_dir(self.meta_folder())?.into_iter().filter_map(|x| x.ok()) {
-      match ShortcutFile::load(entry.path()) {
+      match Shortcut::load(entry.path()) {
         Ok(file) => println!("> {} => {}", file.name, file.body),
         Err(err) if notify_errors => {
           println!("> Invalid file: {}", entry.file_name().to_str().unwrap());
@@ -70,14 +70,14 @@ impl Controller {
     Ok(())
   }
 
-  pub fn find_shortcut(&self, name: impl AsRef<str>) -> Result<ShortcutFile> {
-    ShortcutFile::load(self.meta_folder().join(format!("{}{}", name.as_ref(), SUFFIX)))
+  pub fn find_shortcut(&self, name: impl AsRef<str>) -> Result<Shortcut> {
+    Shortcut::load(self.meta_folder().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
   pub fn make(
     &mut self, names: &[impl AsRef<str>], interpreters: Option<&[impl AsRef<str>]>
   ) -> Result<()> {
-    let shortcut_files = names.iter().map(|name| self.find_shortcut(name)).collect::<Result<Vec<ShortcutFile>>>()?;
+    let shortcut_files = names.iter().map(|name| self.find_shortcut(name)).collect::<Result<Vec<Shortcut>>>()?;
     let interpreters: Option<Vec<Interpreter>> = Interpreter::try_collect(interpreters)?;
     let all_interpreters = Interpreter::all();
     for file in shortcut_files {

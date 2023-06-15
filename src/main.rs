@@ -1,7 +1,7 @@
 mod cli;
-mod file;
 mod errors;
 mod script;
+mod shortcut;
 mod controller;
 mod interpreter;
 

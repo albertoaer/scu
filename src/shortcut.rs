@@ -4,13 +4,13 @@ use std::{fs, path};
 use crate::{errors::{Result, ScuError}, interpreter::Interpreter};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ShortcutFile {
+pub struct Shortcut {
   pub name: String,
   pub interpreters: Option<Vec<Interpreter>>,
-  pub body: ShortcutFileBody
+  pub body: ShortcutBody
 }
 
-impl ShortcutFile {
+impl Shortcut {
   pub fn load(path: impl AsRef<path::Path>) -> Result<Self> {
     toml::from_str(fs::read_to_string(path)?.as_str())
       .map_err(|err| err.into())
@@ -27,11 +27,11 @@ impl ShortcutFile {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum ShortcutFileBody {
+pub enum ShortcutBody {
   Command(Vec<String>),
 }
 
-impl ShortcutFileBody {
+impl ShortcutBody {
   pub fn command(&self) -> Vec<String> {
     match self {
       Self::Command(vec) => vec.clone()
@@ -39,7 +39,7 @@ impl ShortcutFileBody {
   }
 }
 
-impl std::fmt::Display for ShortcutFileBody {
+impl std::fmt::Display for ShortcutBody {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     write!(f, "{}", match self {
       Self::Command(cmd) => cmd.into_iter()
@@ -52,7 +52,7 @@ impl std::fmt::Display for ShortcutFileBody {
 pub struct ShortcutFileBuilder {
   pub name: Option<String>,
   pub interpreters: Option<Vec<Interpreter>>,
-  pub body: Option<ShortcutFileBody>
+  pub body: Option<ShortcutBody>
 }
 
 impl ShortcutFileBuilder {
@@ -75,12 +75,12 @@ impl ShortcutFileBuilder {
   }
 
   pub fn command(mut self, command: Vec<String>) -> Self {
-    self.body = Some(ShortcutFileBody::Command(command));
+    self.body = Some(ShortcutBody::Command(command));
     self
   }
 
-  pub fn build(self) -> ShortcutFile {
-    ShortcutFile {
+  pub fn build(self) -> Shortcut {
+    Shortcut {
       name: self.name.unwrap(),
       interpreters: self.interpreters,
       body: self.body.unwrap()
