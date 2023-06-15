@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use crate::{controller::Controller, file::ShortcutFile, errors::Result};
+use crate::{controller::Controller, file::ShortcutFile, errors::Result, interpreter::Interpreter};
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -14,26 +14,28 @@ pub enum Command {
     name: String,
     #[arg(required = true)]
     command: Vec<String>,
-    #[arg(name = "interpreters", short = 'i', num_args(0..))]
-    override_interpreters: Option<Vec<String>>,
+    #[arg(short, num_args(0..))]
+    interpreters: Option<Vec<String>>,
+    #[arg(short, long, default_value_t = false)]
+    make: bool
   },
   #[clap(name = "del", about = "Delete a shortcut template")]
   Delete {
     #[arg(required = true)]
     names: Vec<String>,
-    #[arg(short = 'f')]
+    #[arg(short)]
     filename: bool
   },
   #[clap(about = "List all the existing resources")]
   List {
-    #[arg(short = 'e')]
+    #[arg(short, long)]
     errors: bool,
-    #[arg(short = 'v')]
+    #[arg(short, long)]
     verbose: bool
   },
   Make {
-    #[arg(name = "interpreters", short = 'i', num_args(0..))]
-    override_interpreters: Option<Vec<String>>,
+    #[arg(short, num_args(0..))]
+    interpreters: Option<Vec<String>>,
     #[arg(required = true)]
     names: Vec<String>
   },
@@ -44,19 +46,19 @@ pub enum Command {
 impl Command {
   pub fn apply(&self, controller: &mut Controller) -> Result<()> {
     match self {
-      Self::New { name, command, override_interpreters } =>
+      Self::New { name, command, interpreters, make } =>
         controller.new_shortcut(name, ShortcutFile::builder()
           .name(name)
           .command(command.clone())
-          //FIXME: .override_interpreters(override_interpreters.clone())
+          .interpreters(Interpreter::try_collect(interpreters.as_deref())?)
           .build()
         ),
       Self::Delete { names, filename } =>
         controller.delete(names, *filename),
       Self::List { errors, verbose } =>
         controller.list(*errors, *verbose),
-      Self::Make { names, override_interpreters } =>
-        controller.make(names, override_interpreters.as_deref()),
+      Self::Make { names, interpreters } =>
+        controller.make(names, interpreters.as_deref()),
       Self::Clean => controller.clean(),
     }
   }

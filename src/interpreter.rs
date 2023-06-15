@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 
-use crate::errors::ScuError;
+use crate::errors::{ScuError, self};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Interpreter {
@@ -61,6 +61,15 @@ impl Interpreter {
       Self::Python => ".py",
       Self::Pythonw => ".pyw",
       Self::Powershell => ".ps1"
+    }
+  }
+
+  pub fn try_collect(interpreters: Option<&[impl AsRef<str>]>) -> errors::Result<Option<Vec<Interpreter>>> {
+    match interpreters.and_then(
+      |x| Some(x.iter().map(|x| x.as_ref().try_into()).collect::<errors::Result<Vec<Interpreter>>>())
+    ) {
+      Some(result) => result.map(|ok| Some(ok)),
+      None => Ok(None),
     }
   }
 }

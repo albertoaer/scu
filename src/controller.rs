@@ -75,20 +75,15 @@ impl Controller {
   }
 
   pub fn make(
-    &mut self, names: &[impl AsRef<str>], override_interpreters: Option<&[impl AsRef<str>]>
+    &mut self, names: &[impl AsRef<str>], interpreters: Option<&[impl AsRef<str>]>
   ) -> Result<()> {
     let shortcut_files = names.iter().map(|name| self.find_shortcut(name)).collect::<Result<Vec<ShortcutFile>>>()?;
-    let override_interpreters: Option<Vec<Interpreter>> = match override_interpreters.and_then(
-      |x| Some(x.iter().map(|x| x.as_ref().try_into()).collect::<Result<Vec<Interpreter>>>())
-    ) {
-      Some(result) => Some(result?),
-      None => None,
-    };
+    let interpreters: Option<Vec<Interpreter>> = Interpreter::try_collect(interpreters)?;
     let all_interpreters = Interpreter::all();
     for file in shortcut_files {
       let interpreters = [
-        override_interpreters.as_deref(),
-        file.override_interpreters.as_deref(),
+        interpreters.as_deref(),
+        file.interpreters.as_deref(),
         Some(all_interpreters.as_slice())
       ].into_iter().find(|x| x.is_some()).unwrap().unwrap();
       for interpreter in interpreters {

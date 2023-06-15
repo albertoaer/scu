@@ -1,12 +1,12 @@
 use serde::{Serialize, Deserialize};
-use std::{fs, path, borrow::Cow};
+use std::{fs, path};
 
 use crate::{errors::{Result, ScuError}, interpreter::Interpreter};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ShortcutFile {
   pub name: String,
-  pub override_interpreters: Option<Vec<Interpreter>>,
+  pub interpreters: Option<Vec<Interpreter>>,
   pub body: ShortcutFileBody
 }
 
@@ -51,7 +51,7 @@ impl std::fmt::Display for ShortcutFileBody {
 
 pub struct ShortcutFileBuilder {
   pub name: Option<String>,
-  pub override_interpreters: Option<Vec<Interpreter>>,
+  pub interpreters: Option<Vec<Interpreter>>,
   pub body: Option<ShortcutFileBody>
 }
 
@@ -59,7 +59,7 @@ impl ShortcutFileBuilder {
   pub fn new() -> Self {
     ShortcutFileBuilder {
       name: None,
-      override_interpreters: None,
+      interpreters: None,
       body: None
     }
   }
@@ -69,8 +69,8 @@ impl ShortcutFileBuilder {
     self
   }
   
-  pub fn override_interpreters(mut self, interpreters: Option<Vec<Interpreter>>) -> Self {
-    self.override_interpreters = interpreters;
+  pub fn interpreters(mut self, interpreters: Option<Vec<Interpreter>>) -> Self {
+    self.interpreters = interpreters;
     self
   }
 
@@ -82,7 +82,7 @@ impl ShortcutFileBuilder {
   pub fn build(self) -> ShortcutFile {
     ShortcutFile {
       name: self.name.unwrap(),
-      override_interpreters: self.override_interpreters,
+      interpreters: self.interpreters,
       body: self.body.unwrap()
     }
   }
