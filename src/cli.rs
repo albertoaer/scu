@@ -46,13 +46,19 @@ pub enum Command {
 impl Command {
   pub fn apply(&self, controller: &mut Controller) -> Result<()> {
     match self {
-      Self::New { name, command, interpreters, make } =>
-        controller.new_shortcut(name, ShortcutFile::builder()
+      Self::New { name, command, interpreters, make } => {
+        let shortcut = ShortcutFile::builder()
           .name(name)
           .command(command.clone())
           .interpreters(Interpreter::try_collect(interpreters.as_deref())?)
-          .build()
-        ),
+          .build();
+        controller.new_shortcut(name, shortcut)?;
+        if *make {
+          controller.make(&[name], None::<&[&str]>)
+        } else {
+          Ok(())
+        }
+      }
       Self::Delete { names, filename } =>
         controller.delete(names, *filename),
       Self::List { errors, verbose } =>
