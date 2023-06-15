@@ -40,7 +40,9 @@ pub enum Command {
     names: Vec<String>
   },
   #[clap(about = "Clean all the created binaries")]
-  Clean
+  Clean,
+  #[clap(about = "Returns information about directories")]
+  Binaries
 }
 
 impl Command {
@@ -66,6 +68,9 @@ impl Command {
       Self::Make { names, interpreters } =>
         controller.make(names, interpreters.as_deref()),
       Self::Clean => controller.clean(),
+      Self::Binaries => Ok(
+        println!("{}", controller.bin_folder().to_string_lossy().replace("\\\\?\\", "").replace("\\\\", "\\"))
+      ),
     }
   }
 }
