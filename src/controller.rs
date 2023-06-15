@@ -6,8 +6,9 @@ pub struct Controller {
   path: path::PathBuf
 }
 
-const META_FOLDER: &str = "meta";
-const BIN_FOLDER: &str = "bin";
+const BASE_DIR: &str = "scu_data";
+const META_DIR: &str = "meta";
+const BIN_DIR: &str = "bin";
 const SUFFIX: &str = ".toml";
 
 impl Controller {
@@ -15,21 +16,21 @@ impl Controller {
     Ok(Controller { path: env::current_exe()?.parent().unwrap().into()  })
   }
 
-  pub fn meta_folder(&self) -> path::PathBuf {
-    self.path.as_path().join(META_FOLDER)
+  pub fn meta_dir(&self) -> path::PathBuf {
+    self.path.as_path().join(BASE_DIR).join(META_DIR)
   }
 
-  pub fn bin_folder(&self) -> path::PathBuf {
-    self.path.as_path().join(BIN_FOLDER)
+  pub fn bin_dir(&self) -> path::PathBuf {
+    self.path.as_path().join(BASE_DIR).join(BIN_DIR)
   }
 
   pub fn setup(&mut self) -> Result<()> {
-    fs::create_dir_all(self.meta_folder())?;
-    fs::create_dir_all(self.bin_folder()).map_err(|err| err.into())
+    fs::create_dir_all(self.meta_dir())?;
+    fs::create_dir_all(self.bin_dir()).map_err(|err| err.into())
   }
 
   pub fn new_shortcut(&mut self, name: impl AsRef<str>, file: Shortcut) -> Result<()> {
-    file.store(self.meta_folder().join(format!("{}{}", name.as_ref(), SUFFIX)))
+    file.store(self.meta_dir().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
   pub fn delete(&mut self, names: &[impl AsRef<str>], by_filename: bool) -> Result<()> {
@@ -44,7 +45,7 @@ impl Controller {
         Err(_) => false,
       }) as Box<dyn Fn(&fs::DirEntry)->bool>
     };
-    for entry in fs::read_dir(self.meta_folder())?.into_iter().filter_map(|x| x.ok()).filter(filter) {
+    for entry in fs::read_dir(self.meta_dir())?.into_iter().filter_map(|x| x.ok()).filter(filter) {
       if entry.metadata().map(|m| m.is_file()).unwrap_or(true) {
         fs::remove_file(entry.path())?;
       } else {
@@ -55,7 +56,7 @@ impl Controller {
   }
 
   pub fn list(&self, notify_errors: bool, verbose: bool) -> Result<()> {
-    for entry in fs::read_dir(self.meta_folder())?.into_iter().filter_map(|x| x.ok()) {
+    for entry in fs::read_dir(self.meta_dir())?.into_iter().filter_map(|x| x.ok()) {
       match Shortcut::load(entry.path()) {
         Ok(file) => println!("> {} => {}", file.name, file.body),
         Err(err) if notify_errors => {
@@ -71,7 +72,7 @@ impl Controller {
   }
 
   pub fn find_shortcut(&self, name: impl AsRef<str>) -> Result<Shortcut> {
-    Shortcut::load(self.meta_folder().join(format!("{}{}", name.as_ref(), SUFFIX)))
+    Shortcut::load(self.meta_dir().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
   pub fn make(
@@ -89,7 +90,7 @@ impl Controller {
       for interpreter in interpreters {
         let script = Script::new(interpreter, file.body.command())?;
         fs::write(
-          self.bin_folder().join(format!("{}{}", file.name, interpreter.extension())),
+          self.bin_dir().join(format!("{}{}", file.name, interpreter.extension())),
           format!("{}", script)
         )?;
       }
@@ -98,7 +99,7 @@ impl Controller {
   }
 
   pub fn clean(&mut self) -> Result<()> {
-    fs::remove_dir_all(self.bin_folder())?;
-    fs::create_dir(self.bin_folder()).map_err(|err| err.into())
+    fs::remove_dir_all(self.bin_dir())?;
+    fs::create_dir(self.bin_dir()).map_err(|err| err.into())
   }
 }

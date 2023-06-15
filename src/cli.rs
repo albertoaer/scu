@@ -69,7 +69,7 @@ impl Command {
         controller.make(names, interpreters.as_deref()),
       Self::Clean => controller.clean(),
       Self::Binaries => Ok(
-        println!("{}", controller.bin_folder().to_string_lossy().replace("\\\\?\\", "").replace("\\\\", "\\"))
+        println!("{}", controller.bin_dir().to_string_lossy().replace("\\\\?\\", "").replace("\\\\", "\\"))
       ),
     }
   }
