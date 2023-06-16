@@ -92,7 +92,11 @@ impl Controller {
       for interpreter in interpreters {
         let script = Script::new(interpreter, file.body.command())?;
         fs::write(
-          self.bin_dir().join(format!("{}{}", file.name, interpreter.extension())),
+          self.bin_dir().join(format!(
+            "{}{}",
+            file.name,
+            if interpreter.prefer_no_extension() { "" } else { interpreter.extension() }
+          )),
           format!("{}", script)
         )?;
       }

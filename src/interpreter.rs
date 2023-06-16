@@ -75,6 +75,10 @@ impl Interpreter {
     }
   }
 
+  pub fn prefer_no_extension(&self) -> bool {
+    matches!(self, Self::Bash)
+  }
+
   pub fn try_collect(interpreters: Option<&[impl AsRef<str>]>) -> errors::Result<Option<Vec<Interpreter>>> {
     match interpreters.and_then(
       |x| Some(x.iter().map(|x| x.as_ref().try_into()).collect::<errors::Result<Vec<Interpreter>>>())
