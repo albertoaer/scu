@@ -57,7 +57,7 @@ script_display! {
 {} {} \"$@\"
 exit $?" [sep " " wrap-spaces "\"{}\""]
 
-  Cmd => "@ECHO off
+  Cmd Batch => "@ECHO off
 {} {} %*
 EXIT /b %errorlevel%" [sep " " wrap-spaces "\"{}\""]
 
