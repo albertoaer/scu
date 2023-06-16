@@ -37,7 +37,7 @@ pub enum Command {
   Make {
     #[arg(short, num_args(0..))]
     interpreters: Option<Vec<String>>,
-    #[arg(required = true)]
+    #[arg(required = false)]
     names: Vec<String>
   },
   #[clap(about = "Clean all the created binaries")]
@@ -57,7 +57,7 @@ impl Command {
           .build();
         controller.new_shortcut(name, shortcut)?;
         if *make {
-          controller.make(&[name], None::<&[&str]>)
+          controller.make(&[name], None::<&[&str]>).map(drop)
         } else {
           Ok(())
         }
@@ -67,7 +67,9 @@ impl Command {
       Self::List { errors, verbose } =>
         controller.list(*errors, *verbose),
       Self::Make { names, interpreters } =>
-        controller.make(names, interpreters.as_deref()),
+        controller.make(names, interpreters.as_deref()).map(
+          |count| println!("Made {} shortcut{}", count, if count == 1 { "" } else { "s" })
+        ),
       Self::Clean => controller.clean(),
       Self::Binaries => Ok(
         println!("{}", controller.bin_dir().to_string_lossy().replace("\\\\?\\", "").replace("\\\\", "\\"))

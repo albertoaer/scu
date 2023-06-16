@@ -77,11 +77,13 @@ impl Controller {
 
   pub fn make(
     &mut self, names: &[impl AsRef<str>], interpreters: Option<&[impl AsRef<str>]>
-  ) -> Result<()> {
+  ) -> Result<i32> {
     let shortcut_files = names.iter().map(|name| self.find_shortcut(name)).collect::<Result<Vec<Shortcut>>>()?;
     let interpreters: Option<Vec<Interpreter>> = Interpreter::try_collect(interpreters)?;
     let all_interpreters = Interpreter::all();
+    let mut count = 0;
     for file in shortcut_files {
+      count += 1;
       let interpreters = [
         interpreters.as_deref(),
         file.interpreters.as_deref(),
@@ -95,7 +97,7 @@ impl Controller {
         )?;
       }
     }
-    Ok(())
+    Ok(count)
   }
 
   pub fn clean(&mut self) -> Result<()> {
