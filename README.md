@@ -14,5 +14,5 @@ Small utility able to create command shortcuts to `commands`/`scripts`/`utilitie
 
 `bin` location can be obtained using:
 ```sh
-$ scu binaries
+$ scu bin
 ```

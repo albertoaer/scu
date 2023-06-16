@@ -42,8 +42,8 @@ pub enum Command {
   },
   #[clap(about = "Clean all the created binaries")]
   Clean,
-  #[clap(about = "Returns information about directories")]
-  Binaries
+  #[clap(about = "Returns the binaries directory")]
+  Bin
 }
 
 impl Command {
@@ -71,7 +71,7 @@ impl Command {
           |count| println!("Made {} shortcut{}", count, if count == 1 { "" } else { "s" })
         ),
       Self::Clean => controller.clean(),
-      Self::Binaries => Ok(
+      Self::Bin => Ok(
         println!("{}", controller.bin_dir().to_string_lossy().replace("\\\\?\\", "").replace("\\\\", "\\"))
       ),
     }
