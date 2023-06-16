@@ -33,6 +33,7 @@ pub enum Command {
     #[arg(short, long)]
     verbose: bool
   },
+  #[clap(about = "Generate executable scripts for the desired interpreters")]
   Make {
     #[arg(short, num_args(0..))]
     interpreters: Option<Vec<String>>,
