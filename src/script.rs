@@ -53,7 +53,7 @@ macro_rules! script_options_display {
 }
 
 script_display! {
-  Bash => "#!/bin/sh
+  Bash => "#!/usr/bin/env bash
 {} {} \"$@\"
 exit $?" [sep " " wrap-spaces "\"{}\""]
 
@@ -64,7 +64,8 @@ EXIT /b %errorlevel%" [sep " " wrap-spaces "\"{}\""]
   Powershell => "& {} {} $args
 exit $LASTEXITCODE" [sep " " wrap-spaces "\"{}\""]
 
-  Python Pythonw => "from subprocess import run
+  Python => "#!/usr/bin/env python
+from subprocess import run
 from sys import argv
 
 program = [{}, {}]
@@ -72,6 +73,16 @@ program = [{}, {}]
 code = run(program + argv[1:]).returncode
 exit(code)" [sep ", " wrap "\"{}\""]
 
-  Ruby => "system(\"{} {}\")
+  Pythonw => "#!/usr/bin/env pythonw
+from subprocess import run
+from sys import argv
+
+program = [{}, {}]
+
+code = run(program + argv[1:]).returncode
+exit(code)" [sep ", " wrap "\"{}\""]
+
+  Ruby => "#!/usr/bin/env ruby
+system(\"{} {}\")
 $?.exitstatus" [sep " " wrap "\\\"{}\\\""]
 }
