@@ -6,19 +6,21 @@ use crate::errors::{ScuError, self};
 pub enum Interpreter {
   Bash,
   Cmd,
+  Powershell,
   Python,
   Pythonw,
-  Powershell
+  Ruby,
 }
 
 impl Interpreter {
-  pub fn all() -> [Self; 5] {
+  pub fn all() -> [Self; 6] {
     [
       Self::Bash,
       Self::Cmd,
       Self::Python,
       Self::Pythonw,
-      Self::Powershell
+      Self::Powershell,
+      Self::Ruby,
     ]
   }
 
@@ -29,6 +31,7 @@ impl Interpreter {
       "python" => Some(Self::Python),
       "pythonw" => Some(Self::Pythonw),
       "powershell" => Some(Self::Powershell),
+      "ruby" => Some(Self::Ruby),
       _ => None
     }
   }
@@ -40,6 +43,7 @@ impl Interpreter {
       ".py" => Some(Self::Python),
       ".pyw" => Some(Self::Pythonw),
       ".ps1" => Some(Self::Powershell),
+      ".rb" => Some(Self::Ruby),
       _ => None
     }
   }
@@ -50,7 +54,8 @@ impl Interpreter {
       Self::Cmd => "cmd",
       Self::Python => "python",
       Self::Pythonw => "pythonw",
-      Self::Powershell => "powershell"
+      Self::Powershell => "powershell",
+      Self::Ruby => "ruby",
     }
   }
 
@@ -60,7 +65,8 @@ impl Interpreter {
       Self::Cmd => ".bat",
       Self::Python => ".py",
       Self::Pythonw => ".pyw",
-      Self::Powershell => ".ps1"
+      Self::Powershell => ".ps1",
+      Self::Ruby => ".rb",
     }
   }
 

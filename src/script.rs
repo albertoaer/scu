@@ -61,6 +61,9 @@ exit $?" [sep " " wrap-spaces "\"{}\""]
 {} {} %*
 EXIT /b %errorlevel%" [sep " " wrap-spaces "\"{}\""]
 
+  Powershell => "& {} {} $args
+exit $LASTEXITCODE" [sep " " wrap-spaces "\"{}\""]
+
   Python Pythonw => "from subprocess import run
 from sys import argv
 
@@ -69,6 +72,6 @@ program = [{}, {}]
 code = run(program + argv[1:]).returncode
 exit(code)" [sep ", " wrap "\"{}\""]
 
-  Powershell => "& {} {} $args
-exit $LASTEXITCODE" [sep " " wrap-spaces "\"{}\""]
+  Ruby => "system(\"{} {}\")
+$?.exitstatus" [sep " " wrap "\\\"{}\\\""]
 }
