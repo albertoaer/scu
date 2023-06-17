@@ -29,7 +29,7 @@ impl Controller {
     fs::create_dir_all(self.bin_dir()).map_err(|err| err.into())
   }
 
-  pub fn new_shortcut(&mut self, name: impl AsRef<str>, file: Shortcut) -> Result<()> {
+  pub fn new_shortcut(&mut self, name: impl AsRef<str>, file: &Shortcut) -> Result<()> {
     file.store(self.meta_dir().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
@@ -55,9 +55,16 @@ impl Controller {
     Ok(())
   }
 
+  pub fn get_all(&self) -> Result<impl Iterator<Item = (fs::DirEntry, Result<Shortcut>)>> {
+    Ok(fs::read_dir(self.meta_dir())?.into_iter().filter_map(|x| x.ok()).map(|entry| {
+      let path = entry.path();
+      (entry, Shortcut::load(path))
+    }))
+  }
+
   pub fn list(&self, notify_errors: bool, verbose: bool) -> Result<()> {
-    for entry in fs::read_dir(self.meta_dir())?.into_iter().filter_map(|x| x.ok()) {
-      match Shortcut::load(entry.path()) {
+    Ok(for (entry, shortcut) in self.get_all()? {
+      match shortcut {
         Ok(file) => println!("> {} => {}", file.name, file.body),
         Err(err) if notify_errors => {
           println!("> Invalid file: {}", entry.file_name().to_str().unwrap());
@@ -65,10 +72,9 @@ impl Controller {
             println!("'''\n{}'''", err)
           }
         }
-        _  => {}
+        _ => {}
       }
-    }
-    Ok(())
+    })
   }
 
   pub fn find_shortcut(&self, name: impl AsRef<str>) -> Result<Shortcut> {
@@ -76,13 +82,12 @@ impl Controller {
   }
 
   pub fn make(
-    &mut self, names: &[impl AsRef<str>], interpreters: Option<&[impl AsRef<str>]>
+    &mut self, shortcuts: &[Shortcut], interpreters: Option<&[impl AsRef<str>]>
   ) -> Result<i32> {
-    let shortcut_files = names.iter().map(|name| self.find_shortcut(name)).collect::<Result<Vec<Shortcut>>>()?;
     let interpreters: Option<Vec<Interpreter>> = Interpreter::try_collect(interpreters)?;
     let all_interpreters = Interpreter::all();
     let mut count = 0;
-    for file in shortcut_files {
+    for file in shortcuts {
       count += 1;
       let interpreters = [
         interpreters.as_deref(),

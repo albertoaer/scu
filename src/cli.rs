@@ -38,7 +38,11 @@ pub enum Command {
     #[arg(short, num_args(0..))]
     interpreters: Option<Vec<String>>,
     #[arg(required = false)]
-    names: Vec<String>
+    names: Vec<String>,
+    #[arg(short)]
+    all: bool,
+    #[arg(short)]
+    clean: bool
   },
   #[clap(about = "Clean all the created binaries")]
   Clean,
@@ -55,9 +59,9 @@ impl Command {
           .command(command.clone())
           .interpreters(Interpreter::try_collect(interpreters.as_deref())?)
           .build();
-        controller.new_shortcut(name, shortcut)?;
+        controller.new_shortcut(name, &shortcut)?;
         if *make {
-          controller.make(&[name], None::<&[&str]>).map(drop)
+          controller.make(&[shortcut], None::<&[&str]>).map(drop)
         } else {
           Ok(())
         }
@@ -66,10 +70,19 @@ impl Command {
         controller.delete(names, *filename),
       Self::List { errors, verbose } =>
         controller.list(*errors, *verbose),
-      Self::Make { names, interpreters } =>
-        controller.make(names, interpreters.as_deref()).map(
+      Self::Make { names, interpreters, all, clean } => {
+        let shortcuts = if *all {
+          controller.get_all()?.filter_map(|(_, result)| result.ok()).collect()
+        } else {
+          names.iter().map(|name| controller.find_shortcut(name)).collect::<Result<Vec<Shortcut>>>()?
+        };
+        if *clean {
+          controller.clean()?;
+        }
+        controller.make(&shortcuts, interpreters.as_deref()).map(
           |count| println!("Made {} shortcut{}", count, if count == 1 { "" } else { "s" })
-        ),
+        )
+      },
       Self::Clean => controller.clean(),
       Self::Bin => Ok(
         println!("{}", controller.bin_dir().to_string_lossy().replace("\\\\?\\", "").replace("\\\\", "\\"))
