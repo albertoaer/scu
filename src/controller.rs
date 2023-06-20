@@ -1,6 +1,6 @@
 use std::{fs, path, env};
 
-use crate::{shortcut::Shortcut, errors::Result, interpreter::Interpreter, script::Script};
+use crate::{shortcut::Shortcut, errors::{Result, ScuError}, interpreter::Interpreter, script::Script};
 
 pub struct Controller {
   path: path::PathBuf
@@ -9,6 +9,7 @@ pub struct Controller {
 const BASE_DIR: &str = "scu_data";
 const META_DIR: &str = "meta";
 const BIN_DIR: &str = "bin";
+const RES_DIR: &str = "res";
 const SUFFIX: &str = ".toml";
 
 impl Controller {
@@ -24,9 +25,18 @@ impl Controller {
     self.path.as_path().join(BASE_DIR).join(BIN_DIR)
   }
 
+  pub fn res_dir(&self) -> path::PathBuf {
+    self.path.as_path().join(BASE_DIR).join(RES_DIR)
+  }
+
+  pub fn create_resource(&self, file: impl AsRef<path::Path>) -> Result<path::PathBuf> {
+    Ok(self.res_dir().join(file.as_ref().file_name().ok_or(ScuError::StringError("Unable to create resource".into()))?))
+  }
+
   pub fn setup(&mut self) -> Result<()> {
     fs::create_dir_all(self.meta_dir())?;
-    fs::create_dir_all(self.bin_dir()).map_err(|err| err.into())
+    fs::create_dir_all(self.bin_dir())?;
+    fs::create_dir_all(self.res_dir()).map_err(|err| err.into())
   }
 
   pub fn new_shortcut(&mut self, name: impl AsRef<str>, file: &Shortcut) -> Result<()> {
@@ -94,8 +104,9 @@ impl Controller {
         file.interpreters.as_deref(),
         Some(all_interpreters.as_slice())
       ].into_iter().find(|x| x.is_some()).unwrap().unwrap();
+      file.write_resources()?;
       for interpreter in interpreters {
-        let script = Script::new(interpreter, file.body.command())?;
+        let script = Script::new(interpreter, file.command())?;
         fs::write(
           self.bin_dir().join(format!(
             "{}{}",

@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use std::{fs, path};
+use std::{fs, path, ops::Deref};
 
 use crate::{errors::{Result, ScuError}, interpreter::Interpreter};
 
@@ -21,43 +21,65 @@ impl Shortcut {
       .and_then(|data| fs::write(path, data).map_err(|err| err.into()))
   }
 
-  pub fn builder() -> ShortcutFileBuilder {
-    ShortcutFileBuilder::new()
+  pub fn builder() -> ShortcutBuilder {
+    ShortcutBuilder::new()
+  }
+}
+
+impl Deref for Shortcut {
+  type Target = ShortcutBody;
+
+  fn deref(&self) -> &Self::Target {
+    &self.body
   }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "type", content = "command")]
 pub enum ShortcutBody {
   Command(Vec<String>),
+  CommandWithScript {
+    cmd: Vec<String>,
+    script: path::PathBuf,
+    script_offset: Option<u8>,
+    body: String,
+  }
 }
 
 impl ShortcutBody {
   pub fn command(&self) -> Vec<String> {
     match self {
-      Self::Command(vec) => vec.clone()
+      // TODO: include the script into the command
+      Self::Command(cmd) | Self::CommandWithScript { cmd, script: _, body: _, script_offset: _ }  => cmd.clone(),
+    }
+  }
+
+  pub fn write_resources(&self) -> Result<()> {
+    match self {
+      Self::CommandWithScript { cmd: _, script, body, script_offset: _ } => fs::write(script, body).map_err(|err| err.into()),
+      _ => Ok(())
     }
   }
 }
 
 impl std::fmt::Display for ShortcutBody {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", match self {
-      Self::Command(cmd) => cmd.into_iter()
+    write!(f, "{}", self.command().into_iter()
       .map(|str| if str.contains(" ") { format!("\"{}\"", str) } else { str.to_string() })
-      .reduce(|a, b| format!("{} {}", a, b)).unwrap(),
-    })
+      .reduce(|a, b| format!("{} {}", a, b)).unwrap()
+    )
   }
 }
 
-pub struct ShortcutFileBuilder {
+pub struct ShortcutBuilder {
   pub name: Option<String>,
   pub interpreters: Option<Vec<Interpreter>>,
   pub body: Option<ShortcutBody>
 }
 
-impl ShortcutFileBuilder {
+impl ShortcutBuilder {
   pub fn new() -> Self {
-    ShortcutFileBuilder {
+    ShortcutBuilder {
       name: None,
       interpreters: None,
       body: None
@@ -77,6 +99,22 @@ impl ShortcutFileBuilder {
   pub fn command(mut self, command: Vec<String>) -> Self {
     self.body = Some(ShortcutBody::Command(command));
     self
+  }
+
+  pub fn command_script(
+    mut self,
+    command: Vec<String>,
+    script_path: impl AsRef<path::Path>,
+    script_body: impl AsRef<str>,
+    script_offset: Option<u8>
+  ) -> Result<Self> {
+    self.body = Some(ShortcutBody::CommandWithScript{
+      cmd: command,
+      script: script_path.as_ref().to_path_buf(),
+      body: script_body.as_ref().to_string(),
+      script_offset
+    });
+    Ok(self)
   }
 
   pub fn build(self) -> Shortcut {

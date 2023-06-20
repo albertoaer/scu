@@ -27,6 +27,7 @@ scu_enum_err! {
   IoError(std::io::Error),
   DeserializeError(toml::de::Error),
   SerializeError(toml::ser::Error),
+  Utf8Error(std::string::FromUtf8Error),
   StringError(String)
 }
 

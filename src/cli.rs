@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
-use crate::{controller::Controller, shortcut::Shortcut, errors::Result, interpreter::Interpreter};
+
+use crate::{controller::Controller, shortcut::{Shortcut, ShortcutBuilder}, errors::Result, interpreter::Interpreter, reader};
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -13,7 +14,13 @@ pub enum Command {
   New {
     name: String,
     #[arg(required = true)]
-    command: Vec<String>,
+    args: Vec<String>,
+    #[arg(short)]
+    source: Option<String>,
+    #[arg(short = 'o')]
+    arg_offset: Option<u8>,
+    #[arg(short)]
+    file: bool,
     #[arg(short, num_args(0..))]
     interpreters: Option<Vec<String>>,
     #[arg(short, long, default_value_t = false)]
@@ -50,22 +57,34 @@ pub enum Command {
   Bin
 }
 
+fn base_shortcut(name: &String, interpreters: &Option<Vec<String>>) -> Result<ShortcutBuilder> {
+  Ok(
+    Shortcut::builder()
+    .name(name)
+    .interpreters(Interpreter::try_collect(interpreters.as_deref())?)
+  )
+}
+
 impl Command {
   pub fn apply(&self, controller: &mut Controller) -> Result<()> {
     match self {
-      Self::New { name, command, interpreters, make } => {
-        let shortcut = Shortcut::builder()
-          .name(name)
-          .command(command.clone())
-          .interpreters(Interpreter::try_collect(interpreters.as_deref())?)
-          .build();
+      Self::New { name, args, source, arg_offset, file, interpreters, make } => {
+        let shortcut = match source {
+          Some(source) => {
+            let base = base_shortcut(name, interpreters)?;
+            let resource = controller.create_resource(source)?;
+            let body = if *file { reader::from_file(source) } else { reader::from_stdin() }?;
+            base.command_script(args.clone(), resource, body, *arg_offset)?
+          },
+          None => base_shortcut(name, interpreters)?.command(args.clone()),
+        }.build();
         controller.new_shortcut(name, &shortcut)?;
         if *make {
           controller.make(&[shortcut], None::<&[&str]>).map(drop)
         } else {
           Ok(())
         }
-      }
+      },
       Self::Delete { names, filename } =>
         controller.delete(names, *filename),
       Self::List { errors, verbose } =>

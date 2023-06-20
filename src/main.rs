@@ -1,6 +1,7 @@
 mod cli;
 mod errors;
 mod script;
+mod reader;
 mod shortcut;
 mod controller;
 mod interpreter;
