@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use std::{fs, path, ops::Deref};
 
-use crate::{errors::{Result, ScuError}, interpreter::Interpreter};
+use crate::{errors::{Result, ScuError}, interpreter::Interpreter, paths};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Shortcut {
@@ -49,8 +49,12 @@ pub enum ShortcutBody {
 impl ShortcutBody {
   pub fn command(&self) -> Vec<String> {
     match self {
-      // TODO: include the script into the command
-      Self::Command(cmd) | Self::CommandWithScript { cmd, script: _, body: _, script_offset: _ }  => cmd.clone(),
+      Self::Command(cmd) => cmd.clone(),
+      Self::CommandWithScript { cmd, script, body: _, script_offset } => {
+        let mut command = cmd.clone();
+        command.insert(script_offset.unwrap_or(command.len() as u8).into(), paths::stringify_default(script));
+        command
+      },
     }
   }
 

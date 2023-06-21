@@ -1,4 +1,5 @@
 mod cli;
+mod paths;
 mod errors;
 mod script;
 mod reader;

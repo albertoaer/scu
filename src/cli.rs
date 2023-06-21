@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use crate::{controller::Controller, shortcut::{Shortcut, ShortcutBuilder}, errors::Result, interpreter::Interpreter, reader};
+use crate::{controller::Controller, shortcut::{Shortcut, ShortcutBuilder}, errors::Result, interpreter::Interpreter, reader, paths};
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -104,7 +104,7 @@ impl Command {
       },
       Self::Clean => controller.clean(),
       Self::Bin => Ok(
-        println!("{}", controller.bin_dir().to_string_lossy().replace("\\\\?\\", "").replace("\\\\", "\\"))
+        println!("{}", paths::stringify_default(controller.bin_dir()))
       ),
     }
   }
