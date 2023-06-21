@@ -122,6 +122,8 @@ impl Controller {
 
   pub fn clean(&mut self) -> Result<()> {
     fs::remove_dir_all(self.bin_dir())?;
-    fs::create_dir(self.bin_dir()).map_err(|err| err.into())
+    fs::create_dir(self.bin_dir())?;
+    fs::remove_dir_all(self.res_dir())?;
+    fs::create_dir(self.res_dir()).map_err(|err| err.into())
   }
 }
