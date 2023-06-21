@@ -52,7 +52,7 @@ impl ShortcutBody {
       Self::Command(cmd) => cmd.clone(),
       Self::CommandWithScript { cmd, script, body: _, script_offset } => {
         let mut command = cmd.clone();
-        command.insert(script_offset.unwrap_or(command.len() as u8).into(), paths::stringify_default(script));
+        command.insert(script_offset.unwrap_or(command.len() as u8).into(), paths::stringify(script, "\\\\"));
         command
       },
     }
