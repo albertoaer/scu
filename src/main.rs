@@ -3,6 +3,7 @@ mod paths;
 mod errors;
 mod script;
 mod reader;
+mod startup;
 mod shortcut;
 mod controller;
 mod interpreter;

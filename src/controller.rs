@@ -1,6 +1,6 @@
 use std::{fs, path, env};
 
-use crate::{shortcut::Shortcut, errors::{Result, ScuError}, interpreter::Interpreter, script::Script};
+use crate::{shortcut::Shortcut, errors::{Result, ScuError}, interpreter::Interpreter, startup::StartupReference};
 
 pub struct Controller {
   path: path::PathBuf
@@ -91,30 +91,60 @@ impl Controller {
     Shortcut::load(self.meta_dir().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
+  pub fn find_shortcuts(&self, names: &[impl AsRef<str>]) -> Result<Vec<Shortcut>> {
+    names.iter().map(|name| self.find_shortcut(name)).collect::<Result<Vec<Shortcut>>>()
+  }
+
   pub fn make(
     &mut self, shortcuts: &[Shortcut], interpreters: Option<&[impl AsRef<str>]>
   ) -> Result<i32> {
     let interpreters: Option<Vec<Interpreter>> = Interpreter::try_collect(interpreters)?;
     let all_interpreters = Interpreter::all();
     let mut count = 0;
-    for file in shortcuts {
+    for shortcut in shortcuts {
       count += 1;
       let interpreters = [
         interpreters.as_deref(),
-        file.interpreters.as_deref(),
+        shortcut.interpreters.as_deref(),
         Some(all_interpreters.as_slice())
       ].into_iter().find(|x| x.is_some()).unwrap().unwrap();
-      file.write_resources()?;
+      shortcut.write_resources()?;
       for interpreter in interpreters {
-        let script = Script::new(interpreter, file.command())?;
+        let script = shortcut.script(interpreter)?;
         fs::write(
           self.bin_dir().join(format!(
             "{}{}",
-            file.name,
+            shortcut.name,
             if interpreter.prefer_no_extension() { "" } else { interpreter.extension() }
           )),
           format!("{}", script)
         )?;
+      }
+    }
+    Ok(count)
+  }
+
+  pub fn startup_set(
+    &mut self, shortcuts: &mut [Shortcut], force: bool
+  ) -> Result<i32> {
+    let mut count = 0;
+    for shortcut in shortcuts {
+      count += 1;
+      if shortcut.startup.is_none() || force {
+        shortcut.update_startup_reference(Some(StartupReference::create(shortcut)?))
+      }
+    }
+    Ok(count)
+  }
+  
+  pub fn startup_quit(
+    &mut self, shortcuts: &mut [Shortcut]
+  ) -> Result<i32> {
+    let mut count = 0;
+    for shortcut in shortcuts {
+      count += 1;
+      if let Some(startup) = &shortcut.startup {
+        startup.delete()?;
       }
     }
     Ok(count)

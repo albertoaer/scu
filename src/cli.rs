@@ -54,7 +54,16 @@ pub enum Command {
   #[clap(about = "Clean all the created binaries")]
   Clean,
   #[clap(about = "Returns the binaries directory")]
-  Bin
+  Bin,
+  #[clap(about = "Admin the startup configuration depending on the system")]
+  Startup {
+    #[arg(required = false)]
+    names: Vec<String>,
+    #[arg(short)]
+    quit: bool,
+    #[arg(short)]
+    force: bool,
+  },
 }
 
 fn base_shortcut(name: &String, interpreters: &Option<Vec<String>>) -> Result<ShortcutBuilder> {
@@ -93,7 +102,7 @@ impl Command {
         let shortcuts = if *all {
           controller.get_all()?.filter_map(|(_, result)| result.ok()).collect()
         } else {
-          names.iter().map(|name| controller.find_shortcut(name)).collect::<Result<Vec<Shortcut>>>()?
+          controller.find_shortcuts(names)?
         };
         if *clean {
           controller.clean()?;
@@ -106,6 +115,14 @@ impl Command {
       Self::Bin => Ok(
         println!("{}", paths::stringify_default(controller.bin_dir()))
       ),
+      Self::Startup { names, quit, force } => {
+        let (count, action) = if !*quit {
+          (controller.startup_set(&mut controller.find_shortcuts(names)?, *force), "set")
+        } else {
+          (controller.startup_quit(&mut controller.find_shortcuts(names)?), "quit")
+        };
+        count.map(|count| println!("{} {} shortcut{}", action, count, if count == 1 { "" } else { "s" }))
+      }
     }
   }
 }

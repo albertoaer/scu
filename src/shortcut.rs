@@ -1,13 +1,14 @@
 use serde::{Serialize, Deserialize};
 use std::{fs, path, ops::Deref};
 
-use crate::{errors::{Result, ScuError}, interpreter::Interpreter, paths};
+use crate::{errors::{Result, ScuError}, interpreter::Interpreter, paths, startup::StartupReference, script::Script};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Shortcut {
   pub name: String,
   pub interpreters: Option<Vec<Interpreter>>,
-  pub body: ShortcutBody
+  pub body: ShortcutBody,
+  pub startup: Option<StartupReference>
 }
 
 impl Shortcut {
@@ -23,6 +24,14 @@ impl Shortcut {
 
   pub fn builder() -> ShortcutBuilder {
     ShortcutBuilder::new()
+  }
+  
+  pub fn script<'a>(&self, interpreter: &'a Interpreter) -> Result<Script<'a>> {
+    Script::new(interpreter, self.command())
+  }
+
+  pub fn update_startup_reference(&mut self, startup: Option<StartupReference>) {
+    self.startup = startup
   }
 }
 
@@ -125,7 +134,8 @@ impl ShortcutBuilder {
     Shortcut {
       name: self.name.unwrap(),
       interpreters: self.interpreters,
-      body: self.body.unwrap()
+      body: self.body.unwrap(),
+      startup: None
     }
   }
 }
