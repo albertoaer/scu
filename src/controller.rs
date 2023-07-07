@@ -1,6 +1,6 @@
 use std::{fs, path, env};
 
-use crate::{shortcut::Shortcut, errors::{Result, ScuError}, interpreter::Interpreter, startup::StartupReference};
+use crate::{shortcut::{Shortcut, ShortcutFile}, errors::{Result, ScuError}, interpreter::Interpreter, startup::StartupReference};
 
 pub struct Controller {
   path: path::PathBuf
@@ -39,8 +39,8 @@ impl Controller {
     fs::create_dir_all(self.res_dir()).map_err(|err| err.into())
   }
 
-  pub fn new_shortcut(&mut self, name: impl AsRef<str>, file: &Shortcut) -> Result<()> {
-    file.store(self.meta_dir().join(format!("{}{}", name.as_ref(), SUFFIX)))
+  pub fn new_shortcut_file(&mut self, name: impl AsRef<str>, file: Shortcut) -> ShortcutFile {
+    ShortcutFile::new(file, self.meta_dir().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
   pub fn delete(&mut self, names: &[impl AsRef<str>], by_filename: bool) -> Result<()> {
@@ -50,7 +50,7 @@ impl Controller {
         |entry: &fs::DirEntry| targets.contains(&entry.file_name().to_str().unwrap())
       ) as Box<dyn Fn(&fs::DirEntry)->bool>
     } else {
-      Box::new(|entry: &fs::DirEntry| match Shortcut::load(entry.path()) {
+      Box::new(|entry: &fs::DirEntry| match ShortcutFile::load(entry.path()) {
         Ok(file) => targets.contains(&file.name.as_str()),
         Err(_) => false,
       }) as Box<dyn Fn(&fs::DirEntry)->bool>
@@ -65,10 +65,10 @@ impl Controller {
     Ok(())
   }
 
-  pub fn get_all(&self) -> Result<impl Iterator<Item = (fs::DirEntry, Result<Shortcut>)>> {
+  pub fn get_all(&self) -> Result<impl Iterator<Item = (fs::DirEntry, Result<ShortcutFile>)>> {
     Ok(fs::read_dir(self.meta_dir())?.into_iter().filter_map(|x| x.ok()).map(|entry| {
       let path = entry.path();
-      (entry, Shortcut::load(path))
+      (entry, ShortcutFile::load(path))
     }))
   }
 
@@ -87,18 +87,18 @@ impl Controller {
     })
   }
 
-  pub fn find_shortcut(&self, name: impl AsRef<str>) -> Result<Shortcut> {
-    Shortcut::load(self.meta_dir().join(format!("{}{}", name.as_ref(), SUFFIX)))
+  pub fn find_shortcut(&self, name: impl AsRef<str>) -> Result<ShortcutFile> {
+    ShortcutFile::load(self.meta_dir().join(format!("{}{}", name.as_ref(), SUFFIX)))
   }
 
-  pub fn find_shortcuts(&self, names: &[impl AsRef<str>]) -> Result<Vec<Shortcut>> {
-    names.iter().map(|name| self.find_shortcut(name)).collect::<Result<Vec<Shortcut>>>()
+  pub fn find_shortcuts(&self, names: &[impl AsRef<str>]) -> Result<Vec<ShortcutFile>> {
+    names.iter().map(|name| self.find_shortcut(name)).collect::<Result<_>>()
   }
 
   pub fn make(
-    &mut self, shortcuts: &[Shortcut], interpreters: Option<&[impl AsRef<str>]>
+    &mut self, shortcuts: &[ShortcutFile], interpreters: Option<&[impl AsRef<str>]>
   ) -> Result<i32> {
-    let interpreters: Option<Vec<Interpreter>> = Interpreter::try_collect(interpreters)?;
+    let interpreters: Option<Vec<_>> = Interpreter::try_collect(interpreters)?;
     let all_interpreters = Interpreter::all();
     let mut count = 0;
     for shortcut in shortcuts {
@@ -125,26 +125,30 @@ impl Controller {
   }
 
   pub fn startup_set(
-    &mut self, shortcuts: &mut [Shortcut], force: bool
+    &mut self, shortcuts: &mut [ShortcutFile], force: bool
   ) -> Result<i32> {
     let mut count = 0;
     for shortcut in shortcuts {
       count += 1;
       if shortcut.startup.is_none() || force {
-        shortcut.update_startup_reference(Some(StartupReference::create(shortcut)?))
+        let startup = StartupReference::create(shortcut)?;
+        shortcut.update_startup_reference(Some(startup));
+        shortcut.store()?;
       }
     }
     Ok(count)
   }
   
   pub fn startup_quit(
-    &mut self, shortcuts: &mut [Shortcut]
+    &mut self, shortcuts: &mut [ShortcutFile]
   ) -> Result<i32> {
     let mut count = 0;
     for shortcut in shortcuts {
       count += 1;
       if let Some(startup) = &shortcut.startup {
         startup.delete()?;
+        shortcut.update_startup_reference(None);
+        shortcut.store()?;
       }
     }
     Ok(count)

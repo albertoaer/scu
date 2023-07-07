@@ -1,7 +1,46 @@
 use serde::{Serialize, Deserialize};
-use std::{fs, path, ops::Deref};
+use std::{fs, path, ops::{Deref, DerefMut}};
 
 use crate::{errors::{Result, ScuError}, interpreter::Interpreter, paths, startup::StartupReference, script::Script};
+
+#[derive(Debug)]
+pub struct ShortcutFile {
+  content: Shortcut,
+  path: path::PathBuf
+}
+
+impl ShortcutFile {
+  pub fn new(content: Shortcut, path: path::PathBuf) -> Self {
+    Self { content, path }
+  }
+
+  pub fn load(path: impl AsRef<path::Path>) -> Result<Self> {
+    toml::from_str(fs::read_to_string(&path)?.as_str())
+      .map_err(|err| err.into()).map(|content| ShortcutFile {
+        content,
+        path: path.as_ref().to_path_buf()
+      })
+  }
+
+  pub fn store(&self) -> Result<()> {
+    toml::to_string_pretty(&self.content).map_err(|err| ScuError::from(err))
+      .and_then(|data| fs::write(&self.path, data).map_err(|err| err.into()))
+  }
+}
+
+impl Deref for ShortcutFile {
+  type Target = Shortcut;
+
+  fn deref(&self) -> &Self::Target {
+    &self.content
+  }
+}
+
+impl DerefMut for ShortcutFile {
+  fn deref_mut(&mut self) -> &mut Self::Target {
+    &mut self.content
+  }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Shortcut {
@@ -12,16 +51,6 @@ pub struct Shortcut {
 }
 
 impl Shortcut {
-  pub fn load(path: impl AsRef<path::Path>) -> Result<Self> {
-    toml::from_str(fs::read_to_string(path)?.as_str())
-      .map_err(|err| err.into())
-  }
-
-  pub fn store(&self, path: impl AsRef<path::Path>) -> Result<()> {
-    toml::to_string_pretty(self).map_err(|err| ScuError::from(err))
-      .and_then(|data| fs::write(path, data).map_err(|err| err.into()))
-  }
-
   pub fn builder() -> ShortcutBuilder {
     ShortcutBuilder::new()
   }

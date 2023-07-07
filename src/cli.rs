@@ -78,7 +78,7 @@ impl Command {
   pub fn apply(&self, controller: &mut Controller) -> Result<()> {
     match self {
       Self::New { name, args, source, arg_offset, file, interpreters, make } => {
-        let shortcut = match source {
+        let shortcut = controller.new_shortcut_file(name, match source {
           Some(source) => {
             let base = base_shortcut(name, interpreters)?;
             let resource = controller.create_resource(source)?;
@@ -86,8 +86,8 @@ impl Command {
             base.command_script(args.clone(), resource, body, *arg_offset)?
           },
           None => base_shortcut(name, interpreters)?.command(args.clone()),
-        }.build();
-        controller.new_shortcut(name, &shortcut)?;
+        }.build());
+        shortcut.store()?;
         if *make {
           controller.make(&[shortcut], None::<&[&str]>).map(drop)
         } else {
