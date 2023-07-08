@@ -11,12 +11,12 @@ mod windows_startup {
   #[derive(Clone, Debug, Serialize, Deserialize)]
   pub struct StartupReference(path::PathBuf);
 
-  const WIN_PATH: &'static str = "AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup";
+  const STARTUP_WIN_PATH: &'static str = "AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup";
 
   impl StartupReference {
     pub fn create(shortcut: &Shortcut) -> Result<Self> {
       let interpreter = Interpreter::Cmd;
-      let path = home_dir().ok_or(ScuError::StringError("".into()))?.join(WIN_PATH)
+      let path = home_dir().ok_or(ScuError::StringError("".into()))?.join(STARTUP_WIN_PATH)
         .join(format!("{}{}", shortcut.name, interpreter.extension()));
       fs::write(&path, format!("{}", shortcut.script(&interpreter)?))?;
       Ok(StartupReference(path))
