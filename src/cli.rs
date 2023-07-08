@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use crate::{controller::Controller, shortcut::{Shortcut, ShortcutBuilder}, errors::Result, interpreter::Interpreter, reader, paths};
+use crate::{controller::Controller, shortcut::{Shortcut, ShortcutBuilder, ShortcutFile}, errors::Result, interpreter::Interpreter, reader, paths};
 
 #[derive(Debug, Parser)]
 pub struct Cli {
@@ -89,17 +89,16 @@ impl Command {
         }.build());
         shortcut.store()?;
         if *make {
-          controller.make(&[shortcut], None::<&[&str]>).map(drop)
-        } else {
-          Ok(())
+          controller.make(&shortcut, None::<&[&str]>)?;
         }
+        Ok(())
       },
       Self::Delete { names, filename } =>
         controller.delete(names, *filename),
       Self::List { errors, verbose } =>
         controller.list(*errors, *verbose),
       Self::Make { names, interpreters, all, clean } => {
-        let shortcuts = if *all {
+        let mut shortcuts = if *all {
           controller.get_all()?.filter_map(|(_, result)| result.ok()).collect()
         } else {
           controller.find_shortcuts(names)?
@@ -107,21 +106,24 @@ impl Command {
         if *clean {
           controller.clean()?;
         }
-        controller.make(&shortcuts, interpreters.as_deref()).map(
-          |count| println!("Made {} shortcut{}", count, if count == 1 { "" } else { "s" })
-        )
+        let action = |controller: &mut Controller, shortcut: &mut _|
+          controller.make(shortcut, interpreters.as_deref()).map(|_| true);
+        let count = controller.operate_many(&mut shortcuts, action);
+        controller.notify_changes("Made", count);
+        Ok(())
       },
       Self::Clean => controller.clean(),
-      Self::Bin => Ok(
-        println!("{}", paths::stringify_default(controller.bin_dir()))
-      ),
+      Self::Bin => Ok(controller.log(paths::stringify_default(controller.bin_dir()))),
       Self::Startup { names, quit, force } => {
-        let (count, action) = if !*quit {
-          (controller.startup_set(&mut controller.find_shortcuts(names)?, *force), "set")
+        let mut shortcuts = controller.find_shortcuts(names)?;
+        let (action, verb) : (Box<dyn FnMut(&mut Controller, &mut ShortcutFile) -> Result<bool>>, _)= if !*quit {
+          (Box::new(|controller, shortcut| controller.startup_set(shortcut, *force)), "Set")
         } else {
-          (controller.startup_quit(&mut controller.find_shortcuts(names)?), "quit")
+          (Box::new(|controller, shortcut| controller.startup_quit(shortcut)), "Quit")
         };
-        count.map(|count| println!("{} {} shortcut{}", action, count, if count == 1 { "" } else { "s" }))
+        let count = controller.operate_many(&mut shortcuts, action);
+        controller.notify_changes(verb, count);
+        Ok(())
       }
     }
   }

@@ -10,11 +10,12 @@ mod interpreter;
 
 use clap::Parser;
 
-fn main() -> errors::Result<()> {
+fn main() {
   let args = cli::Cli::parse();
   let mut controller = controller::Controller::new().unwrap();
 
   controller.setup().unwrap();
 
-  args.command.apply(&mut controller)
+  let result = args.command.apply(&mut controller);
+  controller.handle_result(result);
 }

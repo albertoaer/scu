@@ -93,6 +93,6 @@ impl TryFrom<&str> for Interpreter {
   type Error = ScuError;
 
   fn try_from(value: &str) -> Result<Self, Self::Error> {
-    Self::from_name(value).ok_or(ScuError::StringError(format!("Interpreter not registered {}", value)))
+    Self::from_name(value).ok_or(ScuError::StringError(format!("Interpreter not registered: {}", value)))
   }
 }

@@ -1,6 +1,11 @@
-use std::{fs, path, env};
+use std::{fs, path, env, fmt, borrow::Borrow};
 
-use crate::{shortcut::{Shortcut, ShortcutFile}, errors::{Result, ScuError}, interpreter::Interpreter, startup::StartupReference};
+use crate::{
+  shortcut::{Shortcut, ShortcutFile},
+  errors::{Result, ScuError},
+  interpreter::Interpreter,
+  startup::StartupReference
+};
 
 pub struct Controller {
   path: path::PathBuf
@@ -14,7 +19,7 @@ const SUFFIX: &str = ".toml";
 
 impl Controller {
   pub fn new() -> Result<Self> {
-    Ok(Controller { path: env::current_exe()?.parent().unwrap().into()  })
+    Ok(Controller { path: env::current_exe()?.parent().unwrap().into() })
   }
 
   pub fn meta_dir(&self) -> path::PathBuf {
@@ -45,15 +50,14 @@ impl Controller {
 
   pub fn delete(&mut self, names: &[impl AsRef<str>], by_filename: bool) -> Result<()> {
     let targets: Vec<&str> = names.into_iter().map(|x| x.as_ref()).collect();
-    let filter = if by_filename {
+    let filter: Box<dyn Fn(&fs::DirEntry)->bool> = if by_filename {
       Box::new(
-        |entry: &fs::DirEntry| targets.contains(&entry.file_name().to_str().unwrap())
-      ) as Box<dyn Fn(&fs::DirEntry)->bool>
+        |entry| targets.contains(&entry.file_name().to_str().unwrap())
+      )
     } else {
-      Box::new(|entry: &fs::DirEntry| match ShortcutFile::load(entry.path()) {
-        Ok(file) => targets.contains(&file.name.as_str()),
-        Err(_) => false,
-      }) as Box<dyn Fn(&fs::DirEntry)->bool>
+      Box::new(
+        |entry| ShortcutFile::load(entry.path()).map(|file| targets.contains(&file.name.as_str())).unwrap_or(false)
+      )
     };
     for entry in fs::read_dir(self.meta_dir())?.into_iter().filter_map(|x| x.ok()).filter(filter) {
       if entry.metadata().map(|m| m.is_file()).unwrap_or(true) {
@@ -75,11 +79,11 @@ impl Controller {
   pub fn list(&self, notify_errors: bool, verbose: bool) -> Result<()> {
     Ok(for (entry, shortcut) in self.get_all()? {
       match shortcut {
-        Ok(file) => println!("> {} => {}", file.name, file.body),
+        Ok(file) => println!("> {} => {}\n", file.name, file.body),
         Err(err) if notify_errors => {
-          println!("> Invalid file: {}", entry.file_name().to_str().unwrap());
+          println!("> Invalid file: {}\n", entry.file_name().to_str().unwrap());
           if verbose {
-            println!("'''\n{}'''", err)
+            println!("'''\n{}'''\n", err);
           }
         }
         _ => {}
@@ -95,63 +99,44 @@ impl Controller {
     names.iter().map(|name| self.find_shortcut(name)).collect::<Result<_>>()
   }
 
-  pub fn make(
-    &mut self, shortcuts: &[ShortcutFile], interpreters: Option<&[impl AsRef<str>]>
-  ) -> Result<i32> {
-    let interpreters: Option<Vec<_>> = Interpreter::try_collect(interpreters)?;
+  pub fn make(&mut self, shortcut: &ShortcutFile, interpreters: Option<&[impl AsRef<str>]>) -> Result<()> {
+    let collected_interpreters = Interpreter::try_collect(interpreters)?;
     let all_interpreters = Interpreter::all();
-    let mut count = 0;
-    for shortcut in shortcuts {
-      count += 1;
-      let interpreters = [
-        interpreters.as_deref(),
-        shortcut.interpreters.as_deref(),
-        Some(all_interpreters.as_slice())
-      ].into_iter().find(|x| x.is_some()).unwrap().unwrap();
-      shortcut.write_resources()?;
-      for interpreter in interpreters {
-        let script = shortcut.script(interpreter)?;
-        fs::write(
-          self.bin_dir().join(format!(
-            "{}{}",
-            shortcut.name,
-            if interpreter.prefer_no_extension() { "" } else { interpreter.extension() }
-          )),
-          format!("{}", script)
-        )?;
-      }
-    }
-    Ok(count)
+    let interpreters = [
+      collected_interpreters.as_deref(),
+      shortcut.interpreters.as_deref(),
+      Some(all_interpreters.as_slice())
+    ].into_iter().find(|x| x.is_some()).unwrap().unwrap();
+    shortcut.write_resources()?;
+    Ok(for interpreter in interpreters {
+      let script = shortcut.script(interpreter)?;
+      fs::write(
+        self.bin_dir().join(format!(
+          "{}{}",
+          shortcut.name,
+          if interpreter.prefer_no_extension() { "" } else { interpreter.extension() }
+        )),
+        format!("{}", script)
+      )?;
+    })
   }
 
-  pub fn startup_set(
-    &mut self, shortcuts: &mut [ShortcutFile], force: bool
-  ) -> Result<i32> {
-    let mut count = 0;
-    for shortcut in shortcuts {
-      count += 1;
-      if shortcut.startup.is_none() || force {
-        let startup = StartupReference::create(shortcut)?;
-        shortcut.update_startup_reference(Some(startup));
-        shortcut.store()?;
-      }
+  pub fn startup_set(&mut self, shortcut: &mut ShortcutFile, force: bool) -> Result<bool> {
+    if shortcut.startup.is_none() || force {
+      let startup = StartupReference::create(shortcut)?;
+      shortcut.update_startup_reference(Some(startup));
+      return shortcut.store().map(|_| true)
     }
-    Ok(count)
+    Ok(false)
   }
   
-  pub fn startup_quit(
-    &mut self, shortcuts: &mut [ShortcutFile]
-  ) -> Result<i32> {
-    let mut count = 0;
-    for shortcut in shortcuts {
-      count += 1;
-      if let Some(startup) = &shortcut.startup {
-        startup.delete()?;
-        shortcut.update_startup_reference(None);
-        shortcut.store()?;
-      }
+  pub fn startup_quit(&mut self, shortcut: &mut ShortcutFile) -> Result<bool> {
+    if let Some(startup) = &shortcut.startup {
+      startup.delete()?;
+      shortcut.update_startup_reference(None);
+      return shortcut.store().map(|_| true)
     }
-    Ok(count)
+    Ok(false)
   }
 
   pub fn clean(&mut self) -> Result<()> {
@@ -159,5 +144,30 @@ impl Controller {
     fs::create_dir(self.bin_dir())?;
     fs::remove_dir_all(self.res_dir())?;
     fs::create_dir(self.res_dir()).map_err(|err| err.into())
+  }
+
+  pub fn notify_changes(&self, verb: impl fmt::Display, count: i32) {
+    println!("{} {} shortcut{}", verb, count, if count == 1 { "" } else { "s" })
+  }
+
+  pub fn handle_error(&self, err: impl Borrow<ScuError>) {
+    println!("Got error: {}", err.borrow())
+  }
+
+  pub fn handle_result<T>(&self, result: impl Borrow<Result<T>>) {
+    if let Err(err) = result.borrow() {
+      self.handle_error(err);
+    }
+  }
+
+  pub fn log(&self, data: impl fmt::Display) {
+    println!("{}", data)
+  }
+
+  pub fn operate_many<'a, T>(&mut self, items: &'a mut [T], mut action: impl FnMut(&mut Controller, &'a mut T) -> Result<bool>) -> i32 {
+    items.into_iter().map(|item| action(self, item).map_err(|err| {
+      self.handle_error(&err);
+      err
+    }).unwrap_or(false) as i32).sum()
   }
 }
