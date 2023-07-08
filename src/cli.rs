@@ -33,7 +33,7 @@ pub enum Command {
     #[arg(short)]
     filename: bool
   },
-  #[clap(about = "List all the existing resources")]
+  #[clap(about = "List all the existing resources", alias = "ls")]
   List {
     #[arg(short, long)]
     errors: bool,

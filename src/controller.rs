@@ -1,10 +1,10 @@
 use std::{fs, path, env, fmt, borrow::Borrow};
 
 use crate::{
-  shortcut::{Shortcut, ShortcutFile},
+  shortcut::{Shortcut, ShortcutFile, self},
   errors::{Result, ScuError},
   interpreter::Interpreter,
-  startup::StartupReference
+  startup::{StartupReference, self}
 };
 
 pub struct Controller {
@@ -79,11 +79,25 @@ impl Controller {
   pub fn list(&self, notify_errors: bool, verbose: bool) -> Result<()> {
     Ok(for (entry, shortcut) in self.get_all()? {
       match shortcut {
-        Ok(file) => println!("> {} => {}\n", file.name, file.body),
-        Err(err) if notify_errors => {
-          println!("> Invalid file: {}\n", entry.file_name().to_str().unwrap());
+        Ok(shortcut) => {
+          println!("> {} => {}", shortcut.name, shortcut.body);
           if verbose {
-            println!("'''\n{}'''\n", err);
+            if let Some(interpreters) = &shortcut.interpreters {
+              println!(
+                " |> Interpreters: {}",
+                interpreters.iter().map(|i| i.name().to_string())
+                  .reduce(|a, b| format!("{}, {}", a, b)).unwrap_or(String::new())
+              )
+            }
+            if let Some(startup) = &shortcut.startup {
+              println!(" |> Startup: {}", startup);
+            }
+          }
+        },
+        Err(err) if notify_errors => {
+          println!("> Invalid file: {}", entry.file_name().to_str().unwrap());
+          if verbose {
+            println!("'''\n{}'''", err);
           }
         }
         _ => {}

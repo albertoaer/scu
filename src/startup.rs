@@ -1,6 +1,6 @@
 #[cfg(target_os = "windows")]
 mod windows_startup {
-  use std::{path, fs};
+  use std::{path, fs, fmt::Display};
 
   use serde::{Serialize, Deserialize};
 
@@ -24,6 +24,12 @@ mod windows_startup {
 
     pub fn delete(&self) -> Result<()> {
       fs::remove_file(&self.0).map_err(|err| err.into())
+    }
+  }
+
+  impl Display for StartupReference {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+      write!(f, "{}", self.0.display())
     }
   }
 }
