@@ -75,6 +75,10 @@ impl Interpreter {
     }
   }
 
+  pub fn preferred_extension(&self) -> &'static str {
+    if self.prefer_no_extension() { "" } else { self.extension() }
+  }
+
   pub fn prefer_no_extension(&self) -> bool {
     matches!(self, Self::Bash)
   }

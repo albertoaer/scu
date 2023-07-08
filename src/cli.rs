@@ -104,7 +104,7 @@ impl Command {
           controller.find_shortcuts(names)?
         };
         if *clean {
-          controller.clean()?;
+          controller.clean_dirs()?;
         }
         let action = |controller: &mut Controller, shortcut: &mut _|
           controller.make(shortcut, interpreters.as_deref()).map(|_| true);
@@ -112,7 +112,7 @@ impl Command {
         controller.notify_changes("Made", count);
         Ok(())
       },
-      Self::Clean => controller.clean(),
+      Self::Clean => controller.clean_dirs(),
       Self::Bin => Ok(controller.log(paths::stringify_default(controller.bin_dir()))),
       Self::Startup { names, quit, force } => {
         let mut shortcuts = controller.find_shortcuts(names)?;

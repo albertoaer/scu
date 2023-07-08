@@ -124,14 +124,8 @@ impl Controller {
     shortcut.write_resources()?;
     Ok(for interpreter in interpreters {
       let script = shortcut.script(interpreter)?;
-      fs::write(
-        self.bin_dir().join(format!(
-          "{}{}",
-          shortcut.name,
-          if interpreter.prefer_no_extension() { "" } else { interpreter.extension() }
-        )),
-        format!("{}", script)
-      )?;
+      let path = self.bin_dir().join(format!("{}{}", shortcut.name, interpreter.preferred_extension()));
+      fs::write(path, format!("{}", script))?;
     })
   }
 
@@ -153,7 +147,7 @@ impl Controller {
     Ok(false)
   }
 
-  pub fn clean(&mut self) -> Result<()> {
+  pub fn clean_dirs(&mut self) -> Result<()> {
     fs::remove_dir_all(self.bin_dir())?;
     fs::create_dir(self.bin_dir())?;
     fs::remove_dir_all(self.res_dir())?;
