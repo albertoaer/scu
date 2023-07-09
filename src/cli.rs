@@ -33,6 +33,11 @@ pub enum Command {
     #[arg(short)]
     filename: bool
   },
+  #[clap(alias = "rn", about = "Updates a shortcut name")]
+  Rename {
+    name: String,
+    new_name: String
+  },
   #[clap(about = "List all the existing resources", alias = "ls")]
   List {
     #[arg(short, long)]
@@ -101,6 +106,12 @@ impl Command {
       },
       Self::Unset { names, filename } =>
         controller.delete(names, *filename),
+      Self::Rename { name, new_name } => {
+        let mut shortcut = controller.find_shortcut(name)?;
+        controller.delete(&[name], false)?;
+        shortcut.name = new_name.clone();
+        shortcut.store()
+      }
       Self::List { errors, verbose } =>
         controller.list(*errors, *verbose),
       Self::Make { names, interpreters, all, clean } => {
