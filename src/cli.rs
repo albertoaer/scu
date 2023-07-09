@@ -11,7 +11,7 @@ pub struct Cli {
 #[derive(Debug, Subcommand)]
 pub enum Command {
   #[clap(about = "Create a shortcut template, it can overwrite an existing one")]
-  New {
+  Set {
     name: String,
     #[arg(required = true)]
     args: Vec<String>,
@@ -26,8 +26,8 @@ pub enum Command {
     #[arg(short, long, default_value_t = false)]
     make: bool
   },
-  #[clap(name = "del", about = "Delete a shortcut template")]
-  Delete {
+  #[clap(about = "Delete a shortcut template")]
+  Unset {
     #[arg(required = true)]
     names: Vec<String>,
     #[arg(short)]
@@ -83,7 +83,7 @@ fn base_shortcut(name: &String, interpreters: &Option<Vec<String>>) -> Result<Sh
 impl Command {
   pub fn apply(&self, controller: &mut Controller) -> Result<()> {
     match self {
-      Self::New { name, args, source, arg_offset, file, interpreters, make } => {
+      Self::Set { name, args, source, arg_offset, file, interpreters, make } => {
         let shortcut = controller.new_shortcut_file(name, match source {
           Some(source) => {
             let base = base_shortcut(name, interpreters)?;
@@ -99,7 +99,7 @@ impl Command {
         }
         Ok(())
       },
-      Self::Delete { names, filename } =>
+      Self::Unset { names, filename } =>
         controller.delete(names, *filename),
       Self::List { errors, verbose } =>
         controller.list(*errors, *verbose),
