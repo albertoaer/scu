@@ -61,8 +61,11 @@ exit $?" [sep " " wrap-spaces "\"{}\""]
 {} {} %*
 EXIT /b %errorlevel%" [sep " " wrap-spaces "\"{}\""]
 
-  Powershell => "& {} {} $args
-exit $LASTEXITCODE" [sep " " wrap-spaces "\"{}\""]
+  Powershell => "$process = {}
+[String[]]$nArgs = {}
+$options = if ($nArgs.Count -or $args.Count) {{ @{{ args = $nArgs + $args }} }} else {{ @{{}} }}
+Start-Process $process @options
+exit $LASTEXITCODE" [sep ", " wrap "\"{}\""]
 
   Python => "#!/usr/bin/env python
 from subprocess import run
