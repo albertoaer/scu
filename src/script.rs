@@ -55,7 +55,7 @@ macro_rules! script_options_display {
 script_display! {
   Bash => "#!/usr/bin/env bash
 {} {} \"$@\"
-exit $?" [sep " " wrap-spaces "\"{}\""]
+exit $?" [sep " " wrap "\"{}\""]
 
   Cmd Batch => "@ECHO off
 {} {} %*
