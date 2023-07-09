@@ -1,10 +1,10 @@
-use std::{fs, path, env, fmt, borrow::Borrow};
+use std::{fs, path, env, fmt, borrow::Borrow, process::Command};
 
 use crate::{
-  shortcut::{Shortcut, ShortcutFile, self},
+  shortcut::{Shortcut, ShortcutFile},
   errors::{Result, ScuError},
   interpreter::Interpreter,
-  startup::{StartupReference, self}
+  startup::{StartupReference}
 };
 
 pub struct Controller {
@@ -152,6 +152,12 @@ impl Controller {
     fs::create_dir(self.bin_dir())?;
     fs::remove_dir_all(self.res_dir())?;
     fs::create_dir(self.res_dir()).map_err(|err| err.into())
+  }
+
+  pub fn execute(&self, shortcut: &ShortcutFile, args: &[String]) -> Result<()> {
+    let shortcut_command = shortcut.command();
+    Command::new(shortcut_command.first().unwrap()).args(&shortcut_command[1..]).args(args).spawn()?;
+    Ok(())
   }
 
   pub fn notify_changes(&self, verb: impl fmt::Display, count: i32) {

@@ -64,6 +64,12 @@ pub enum Command {
     #[arg(short)]
     force: bool,
   },
+  #[clap(about = "Run a shortcut as a system command")]
+  Run {
+    name: String,
+    #[arg(required = false)]
+    args: Vec<String>,
+  }
 }
 
 fn base_shortcut(name: &String, interpreters: &Option<Vec<String>>) -> Result<ShortcutBuilder> {
@@ -125,6 +131,7 @@ impl Command {
         controller.notify_changes(verb, count);
         Ok(())
       }
+      Self::Run { name, args } => controller.execute(&controller.find_shortcut(name)?, args)
     }
   }
 }
